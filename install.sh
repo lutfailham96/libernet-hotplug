@@ -37,4 +37,5 @@ prepare_interface \
   && prepare_workspace \
   && install_hotplug \
   && configure_hotplug \
+  && echo -e "Libernet hotplug installed successfully" \
   || echo -e "Installation was failed"
