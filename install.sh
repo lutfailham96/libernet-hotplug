@@ -4,6 +4,8 @@
 # version : v1.0.0
 # Author  : Lutfa Ilham
 
+INTERFACE="fibocom" # Please update this default value
+
 while getopts i: flag; do
   case "${flag}" in
     i)
