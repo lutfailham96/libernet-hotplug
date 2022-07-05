@@ -1,0 +1,57 @@
+LIBERNET_ENABLED=$(uci -q get libernet.@libernet[0].enabled)
+LIBERNET_AUTO_START=$(uci -q get libernet.@libernet[0].autostart)
+LIBERNET_AUTO_STOP=$(uci -q get libernet.@libernet[0].autostop)
+LIBERNET_MAIN_NETWORK_INTERFACE=$(uci -q get libernet.@libernet[0].main_network_interface)
+LIBERNET_PING_HOSTS=$(uci -q get libernet.@libernet[0].ping_hosts)
+LIBERNET_PING_WAIT=$(uci -q get libernet.@libernet[0].ping_wait)
+LIBERNET_DIR="/opt/libernet"
+LIBERNET_NODE="libernet-system"
+
+libernet_check() {
+  [[ ! ${LIBERNET_ENABLED} -gt 0 ]] && logger -t "${LIBERNET_NODE}" "Libernet is disabled, skipping" && exit 0
+  [[ ! ${LIBERNET_AUTO_START} -gt 0 ]] && logger -t "${LIBERNET_NODE}" "Auto start is disabled, skipping..." && exit 0
+  [[ $(cat "${LIBERNET_DIR}/log/status.log") -gt 0 ]] && logger -t "${LIBERNET_NODE}" "Libernet already running, skipping ..." && exit 0
+}
+
+libernet_ping_hosts() {
+ logger -t "${LIBERNET_NODE}" "Pinging Libernet hosts"
+ for host in ${LIBERNET_PING_HOSTS}; do 
+   /usr/bin/curl $host &
+ done
+ [[ -z ${LIBERNET_PING_WAIT} || ! ${LIBERNET_PING_WAIT} -gt 0 ]] && LIBERNET_PING_WAIT=3
+ sleep ${LIBERNET_PING_WAIT}
+}
+
+libernet_start() {
+  libernet_check
+  libernet_ping_hosts
+  logger -t "${LIBERNET_NODE}" "Auto starting Libernet"
+  LIBERNET_DIR=${LIBERNET_DIR} "${LIBERNET_DIR}/bin/service.sh" -sl && logger -t "${LIBERNET_NODE}" "Libernet connection established" || logger -t "${LIBERNET_NODE}" "Libernet connection failed"
+}
+
+libernet_stop() {
+  [[ ! ${LIBERNET_ENABLED} -gt 0 ]] && logger -t "${LIBERNET_NODE}" "Libernet is disabled, skipping" && exit 0
+  [[ ! ${LIBERNET_AUTO_STOP} -gt 0 ]] && logger -t "${LIBERNET_NODE}" "Auto stop is disabled, skipping..." && exit 0
+  [[ $(cat "${LIBERNET_DIR}/log/status.log") -eq 0 ]] && logger -t "${LIBERNET_NODE}" "Libernet already stopped, skipping ..." && exit 0
+  logger -t "${LIBERNET_NODE}" "Auto stopping Libernet"
+  LIBERNET_DIR=${LIBERNET_DIR} "${LIBERNET_DIR}/bin/service.sh" -ds
+  logger -t "${LIBERNET_NODE}" "Libernet stopped"
+}
+
+case ${ACTION} in
+  ifup)
+    case ${INTERFACE} in
+      ${LIBERNET_MAIN_NETWORK_INTERFACE})
+        libernet_start
+        ;;
+    esac
+    ;;
+  ifdown)
+    case ${INTERFACE} in
+      ${LIBERNET_MAIN_NETWORK_INTERFACE})
+        libernet_stop
+        ;;
+    esac
+    ;;
+esac
+
