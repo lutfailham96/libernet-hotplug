@@ -1,0 +1,7 @@
+config libernet
+	option enabled '1'                      # Enabled: 1, Disabled: 0
+	option main_network_interface 'fibocom' # Main network interface, example: fibocom, usbnet, usb0
+	option autostart '1'                    # autostart Libernet if main network interface link is up
+	option autostop '1'                     # autostop Libernet if main network interface link is down
+	option ping_hosts 'bing.com google.com' # do async http ping (curl) to hosts before start Libernet
+	option ping_wait '3'                    # delay in second before start Libernet
